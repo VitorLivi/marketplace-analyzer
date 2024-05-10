@@ -1,12 +1,15 @@
 import cv2
 import math
 
+from recognizer import Recognizer
+
 class Designer:
     def __init__(self):
+        print("Designer initialized")
         self.initialize()
 
     def initialize(self):
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         cap.set(3, 1080)
         cap.set(4, 1080)
         self.cap = cap
@@ -26,7 +29,12 @@ class Designer:
         return False
 
     def draw_boxes(self, boxes, classNames):
+        self.boxes = boxes
+
         for box in boxes:
+            if classNames[int(box.cls[0])] == "cell phone":
+                continue
+
             # bounding box
             x1, y1, x2, y2 = box.xyxy[0]
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)  # convert to int values
@@ -49,6 +57,31 @@ class Designer:
             cls = int(box.cls[0])
             cv2.putText(self.img, f"{classNames[cls]} {confidence}", org,
                         font, fontScale, color, thickness)
+
+
+    def find_overlap_boxes_with_clients(self, clients):
+        for box in self.boxes:
+            cls = int(box.cls[0])
+            if Recognizer.classNames[cls] == "person":
+                continue
+
+            x1, y1, x2, y2 = box.xyxy[0]
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)  # convert to int values
+
+            box_json = {
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2
+            }
+
+            for client in clients:
+                is_overlapping = self.check_box_overlap(client.image_position, box_json)
+
+                if is_overlapping:
+                    print(f"Is overlapping --> {Recognizer.classNames[cls]}")
+                    
+                    client.set_tag(Recognizer.classNames[cls])
 
     def draw_person_counter(self, length):
         cv2.putText(self.img, f"Person count: {length}", (50, 50),

@@ -1,13 +1,16 @@
 import datetime
+import uuid
+import cv2
+import os
 
 class Client:
-  def __init__(self, id):
-    self.id = id
-    self.entry_date_time = None
-    self.left_date_time = None
+  def __init__(self):
+    self.id = uuid.uuid4()
+    self.entry_date_time = datetime.datetime.now()
     self.image = None
     self.image_position = None
     self.last_seen = datetime.datetime.now()
+    self.time_spent = datetime.timedelta(seconds=0)
     self.tags = []
 
   def __eq__(self, other):
@@ -19,15 +22,32 @@ class Client:
     else:
         return False
 
+  def remove_temp_image(self):
+      if self.image == None:
+        return
+
+      print(f"Removing temp image {self.image}")
+      os.remove(self.image)
+
+  def save_today_image(self):
+    if self.image == None:
+        return
+
+    date = datetime.date.strftime(datetime.date.today(), "%d-%m-%Y")
+
+    image = cv2.imread(self.image)
+    cv2.imwrite(f'./images/{date}/{uuid.uuid4()}.jpg', image)
+
   def enter(self):
     self.entry_date_time = datetime.datetime.now()
 
-  def left(self):
-    self.left_date_time = datetime.datetime.now()
+  def calc_time_spent(self):
+    if self.entry_date_time == None or self.last_seen == None:
+      self.time_spent = datetime.timedelta(seconds=0)
+    else:
+      self.time_spent = self.last_seen - self.entry_date_time
 
-  def get_time_spent(self):
-    if self.left_date_time == None:
-        return False
+    return self.time_spent
 
   def set_image (self, image):
     self.image = image
@@ -46,3 +66,12 @@ class Client:
 
   def set_image_position(self, position):
     self.image_position = position
+
+  def to_json(self):
+    return {
+      "_id": self.id,
+      "entry_date_time": self.entry_date_time.strftime("%d-%m-%Y %H:%M:%S") if self.entry_date_time != None else "",
+      "last_seen": self.last_seen.strftime("%d-%m-%Y %H:%M:%S") if self.last_seen != None else "",
+      "time_spent_in_seconds": self.time_spent.total_seconds(),
+      "tags": self.tags
+    }

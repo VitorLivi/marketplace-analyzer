@@ -1,120 +1,54 @@
-from ultralytics import YOLO
 import cv2
-import datetime
-import uuid
 import os
 import face_recognition
+from face_recognizer import FaceRecognizer
 from designer import Designer
-
 from entities.client import Client
+from utils.file_utils import FileUtils
+from recognizer import Recognizer
+from database import Database
+import time
 
-dirs = os.listdir('./images/temp')
-for file in dirs:
-    os.remove(f'./images/temp/{file}')
-
-date = datetime.date.strftime(datetime.date.today(), "%d-%m-%Y")
-
-if not os.path.exists(f'./images/{date}'):
-    os.makedirs(f'./images/{date}')
+FileUtils.remove_all_in_dir(os.path.abspath('./images/temp'))
+FileUtils.create_today_dir(os.path.abspath('./images'))
 
 current_clients = []
 clients = []
 
-# db = Database()
-
-# db.get_default_database().get_collection("client").insert_many([
-#     {
-#         "name": "John",
-#         "age": 25
-#     },
-#     {
-#         "name": "Jane",
-#         "age": 30
-#     }
-# ])
-
-# model
-model = YOLO("yolov8n.pt")
-
-# object classes
-classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
-              "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-              "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
-              "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat",
-              "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
-              "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
-              "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed",
-              "diningtable", "toilet", "tvmonitor", "laptop", "mouse", "remote", "keyboard", "cell phone",
-              "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
-              "teddy bear", "hair drier", "toothbrush"]
-
-def find_overlap_boxes_with_person(boxes):
-    global current_clients
-    for box in boxes:
-        cls = int(box.cls[0])
-        if classNames[cls] == "person":
-            continue
-
-        x1, y1, x2, y2 = box.xyxy[0]
-        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)  # convert to int values
-
-        box_json = {
-            "x1": x1,
-            "y1": y1,
-            "x2": x2,
-            "y2": y2
-        }
-
-        for client in current_clients:
-            is_overlapping = designer.check_box_overlap(client.image_position, box_json)
-            print(f"Is overlapping --> {is_overlapping}")
-
-            if is_overlapping:
-                client.set_tag(classNames[cls])
-
-def find_face_encodings(image_path):
-    image = cv2.imread(image_path)
-    face_enc = face_recognition.face_encodings(image)
-    if len(face_enc) > 0 :
-        return face_enc[0]
-    else:
-        return None
-
-def remove_client_temp_image(image_path):
-    print(f"Removing temp image {image_path}")
-    os.remove(image_path)
-
-def save_client_today_image(image_path):
-    image = cv2.imread(image_path)
-    cv2.imwrite(f'./images/{date}/{uuid.uuid4()}.jpg', image)
-
+db = Database()
 def on_client_exit(client):
     global clients
 
-    save_client_today_image(client.image)
+    client.calc_time_spent()
+    client.save_today_image()
+
+    print(f"Client TIME SPENT {client.time_spent}")
+
+    db.get_database().get_collection("day_client").insert_one(client.to_json())
+
     clients.remove(client)
-    remove_client_temp_image(client.image)
+    client.remove_temp_image()
     print(f"Client {client.id} removed")
 
-def compare_similarity(new_client):
+def compare_clients_similarity(new_client):
     global current_clients, clients
 
     if (len(current_clients) == 0):
         clients.append(new_client)
         return
 
-    image_1 = find_face_encodings(new_client.image)
+    image_1 = FaceRecognizer.find_face_encodings(new_client.image)
 
     if image_1 is None:
         print("No face found in the image")
-        remove_client_temp_image(new_client.image)
+        new_client.remove_temp_image()
         return
 
     print ("Current client ids -->", [client.id for client in clients])
 
     image_is_similar_to_some_client = False
     for client in clients:
-        image_2 = find_face_encodings(client.image)
+        image_2 = FaceRecognizer.find_face_encodings(client.image)
         isImageSimilar = face_recognition.compare_faces([image_1], image_2)[0]
             
         if isImageSimilar:
@@ -127,16 +61,18 @@ def compare_similarity(new_client):
         clients.append(new_client)
     else:
         print("Image is similar to some client")
-        remove_client_temp_image(new_client.image)
+        new_client.remove_temp_image()
 
 def on_find_person(coords):
     global current_clients
 
-    new_uuid = uuid.uuid4()
-    image_path = f'./images/temp/{new_uuid}.jpg'
+    if coords is None:
+        return
+
+    new_client = Client()
+    image_path = f'./images/temp/{new_client.id}.jpg'
     cv2.imwrite(image_path, img[coords[1]:coords[3], coords[0]:coords[2]])
 
-    new_client = Client(new_uuid)
     new_client.set_image_position({
         "x1": coords[0],
         "y1": coords[1],
@@ -146,6 +82,11 @@ def on_find_person(coords):
     new_client.set_image(image_path)
     current_clients.append(new_client)
 
+
+def on_find_gun(coords):
+    print(f"Gun found at {coords}")
+
+
 def check_clients_last_seen():
     global clients
 
@@ -153,19 +94,32 @@ def check_clients_last_seen():
         if (client.is_client_exited()):
             on_client_exit(client)
 
-def after_render():
-    global current_clients
-
-    check_clients_last_seen()
-
-    for client in current_clients:
-        compare_similarity(client)
-
 designer = Designer()
+recognizer = Recognizer()
 
+last_gun_model_execution = None
+seconds_to_execute_gun_model = 2
 while True:
     img = designer.get_frame()
-    results = model(img, stream=True)
+    results = recognizer.run(img)
+
+    if (last_gun_model_execution != None):
+        print(f"Time to execute gun model --> {time.time() - last_gun_model_execution}")
+    if last_gun_model_execution == None or (time.time() - last_gun_model_execution) > seconds_to_execute_gun_model:
+        print("Running gun model")
+        last_gun_model_execution = time.time()
+        gun_results = recognizer.run_gun_model(img)
+
+        for r in gun_results:
+            class_name = r.names.get(0)
+            boxes = r.boxes
+            
+            for box in boxes:
+                if class_name == "gun":
+                    on_find_gun(box.xyxy[0])
+
+                designer.draw_boxes(boxes, [class_name])
+
 
     print(f"Current clients length --> {len(current_clients)}")
 
@@ -177,16 +131,21 @@ while True:
             x1, y1, x2, y2 = box.xyxy[0]
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)  # convert to int values
 
-            designer.draw_boxes(boxes, classNames)
+            designer.draw_boxes(boxes, Recognizer.classNames)
             designer.draw_person_counter(len(current_clients))
 
-            # class name
             cls = int(box.cls[0])
-            if classNames[cls] == "person":
+            if Recognizer.classNames[cls] == "person":
                 on_find_person((x1, y1, x2, y2))
 
+            designer.find_overlap_boxes_with_clients(current_clients)
+
     designer.show_image()
-    after_render()
+    check_clients_last_seen()
+    
+    for client in current_clients:
+        compare_clients_similarity(client)
+
     if designer.is_quit_key_pressed():
         break
 

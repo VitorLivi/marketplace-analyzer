@@ -9,8 +9,9 @@ class Database:
             cls.__instance = cls.connect_to_database()
         return cls.__instance
 
+    @staticmethod
     def connect_to_database():
-       CONNECTION_STRING = "mongodb+srv://root:123@localhost:27017/analytics"
+       CONNECTION_STRING = "mongodb://root:123@localhost:27017/analytics?authSource=admin&uuidRepresentation=standard"
        client = MongoClient(CONNECTION_STRING)
        return client
 
