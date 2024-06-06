@@ -14,6 +14,8 @@ FileUtils.create_today_dir(os.path.abspath('./images'))
 
 current_clients = []
 clients = []
+designer = Designer()
+recognizer = Recognizer()
 
 db = Database()
 def on_client_exit(client):
@@ -30,38 +32,39 @@ def on_client_exit(client):
     client.remove_temp_image()
     print(f"Client {client.id} removed")
 
-def compare_clients_similarity(new_client):
+def compare_clients_similarity():
     global current_clients, clients
 
-    if (len(current_clients) == 0):
-        clients.append(new_client)
-        return
+    for new_client in current_clients:
+        if (len(current_clients) == 0):
+            clients.append(new_client)
+            return
 
-    image_1 = FaceRecognizer.find_face_encodings(new_client.image)
+        image_1 = FaceRecognizer.find_face_encodings(new_client.image)
 
-    if image_1 is None:
-        print("No face found in the image")
-        new_client.remove_temp_image()
-        return
+        if image_1 is None:
+            print("No face found in the image")
+            new_client.remove_temp_image()
+            return
 
-    print ("Current client ids -->", [client.id for client in clients])
+        print ("Current client ids -->", [client.id for client in clients])
 
-    image_is_similar_to_some_client = False
-    for client in clients:
-        image_2 = FaceRecognizer.find_face_encodings(client.image)
-        isImageSimilar = face_recognition.compare_faces([image_1], image_2)[0]
-            
-        if isImageSimilar:
-            client.set_last_seen()
-            image_is_similar_to_some_client = True
-            break
+        image_is_similar_to_some_client = False
+        for client in clients:
+            image_2 = FaceRecognizer.find_face_encodings(client.image)
+            isImageSimilar = face_recognition.compare_faces([image_1], image_2)[0]
+                
+            if isImageSimilar:
+                client.set_last_seen()
+                image_is_similar_to_some_client = True
+                break
 
-    if not image_is_similar_to_some_client:
-        print("Image is not similar to any client")
-        clients.append(new_client)
-    else:
-        print("Image is similar to some client")
-        new_client.remove_temp_image()
+        if not image_is_similar_to_some_client:
+            print("Image is not similar to any client")
+            clients.append(new_client)
+        else:
+            print("Image is similar to some client")
+            new_client.remove_temp_image()
 
 def on_find_person(coords):
     global current_clients
@@ -94,19 +97,17 @@ def check_clients_last_seen():
         if (client.is_client_exited()):
             on_client_exit(client)
 
-designer = Designer()
-recognizer = Recognizer()
 
 last_gun_model_execution = None
 seconds_to_execute_gun_model = 2
-while True:
-    img = designer.get_frame()
-    results = recognizer.run(img)
+
+def run_gun_model(img):
+    global last_gun_model_execution, seconds_to_execute_gun_model
 
     if (last_gun_model_execution != None):
-        print(f"Time to execute gun model --> {time.time() - last_gun_model_execution}")
+        print(f"time to execute gun model --> {time.time() - last_gun_model_execution}")
     if last_gun_model_execution == None or (time.time() - last_gun_model_execution) > seconds_to_execute_gun_model:
-        print("Running gun model")
+        print("running gun model")
         last_gun_model_execution = time.time()
         gun_results = recognizer.run_gun_model(img)
 
@@ -120,8 +121,9 @@ while True:
 
                 designer.draw_boxes(boxes, [class_name])
 
-
-    print(f"Current clients length --> {len(current_clients)}")
+def run_default_model(img):
+    global designer, recognizer, current_clients
+    results = recognizer.run(img)
 
     current_clients = []
     for r in results:
@@ -132,19 +134,25 @@ while True:
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)  # convert to int values
 
             designer.draw_boxes(boxes, Recognizer.classNames)
-            designer.draw_person_counter(len(current_clients))
 
             cls = int(box.cls[0])
             if Recognizer.classNames[cls] == "person":
                 on_find_person((x1, y1, x2, y2))
 
+            designer.draw_person_counter(len(current_clients))
             designer.find_overlap_boxes_with_clients(current_clients)
+
+while True:
+    img = designer.get_frame()
+
+    run_gun_model(img)
+    run_default_model(img)
+
+    print(f"Current clients length --> {len(current_clients)}")
 
     designer.show_image()
     check_clients_last_seen()
-    
-    for client in current_clients:
-        compare_clients_similarity(client)
+    compare_clients_similarity()
 
     if designer.is_quit_key_pressed():
         break

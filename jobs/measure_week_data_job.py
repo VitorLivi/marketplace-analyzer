@@ -52,8 +52,6 @@ def get_unique_image_paths(existent_week_folders):
         for image_name in all_image_name:
             unique_image_paths.append('./images/' + day + '/' + image_name)
 
-
-
 def get_client_image_by_date (date, client_id):
     client_image = cv2.imread(f'./images/{date}/{client_id}.jpg')
 
