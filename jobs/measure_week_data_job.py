@@ -22,27 +22,6 @@ def get_existent_week_folders(daysOfWeekRange):
 
     return existent_week_paths
 
-def compare_week_images (week_range):
-    days_of_week_range = DateTimeUtils.getDaysOfWeekRange(week_range)
-    existent_week_folders = get_existent_week_folders(days_of_week_range)
-
-    unique_image_paths = get_unique_image_paths(existent_week_folders)
-
-    for image_path in unique_image_paths:
-        current_image_to_compare = FaceRecognizer.find_face_encodings(image_path)
-
-        for image_path2 in unique_image_paths:
-            if image_path != image_path2:
-                image_to_compare = FaceRecognizer.find_face_encodings(image_path2)
-                is_similar = FaceRecognizer.is_images_similar(current_image_to_compare, image_to_compare)
-
-                if is_similar:
-                    # remove compared image from array to avoid duplicate
-                    # maybe update database adding new similarity field refering to the similar client
-                    # increase counter for similar client this id
-
-    
-
 def get_unique_image_paths(existent_week_folders):
     for day in existent_week_folders:
         all_image_name = os.listdir(f'./images/{day}')
@@ -52,13 +31,44 @@ def get_unique_image_paths(existent_week_folders):
         for image_name in all_image_name:
             unique_image_paths.append('./images/' + day + '/' + image_name)
 
+def compare_images(image_path, image_path2):
+    current_image_to_compare = FaceRecognizer.find_face_encodings(image_path)
+
+    image_to_compare = FaceRecognizer.find_face_encodings(image_path2)
+    return FaceRecognizer.is_images_similar(current_image_to_compare, image_to_compare)
+
+def compare_week_images (week_range):
+    days_of_week_range = DateTimeUtils.getDaysOfWeekRange(week_range)
+    existent_week_folders = get_existent_week_folders(days_of_week_range)
+
+    has_similar_images = True
+    while has_similar_images:
+        is_some_image_similar = False
+        unique_image_paths = get_unique_image_paths(existent_week_folders)
+
+        for i in range(len(unique_image_paths)):
+            is_similar = compare_images(unique_image_paths[i], unique_image_paths[i + 1])
+
+            if is_similar:
+                is_some_image_similar = True
+
+                # NOTE: remove similar image
+                os.remove(unique_image_paths[i + 1])
+
+                # TODO: increase counter for times he is seen
+                db.get_collection('week_client').insert_one({
+                    
+                })
+                
+
+        has_similar_images = is_some_image_similar
+
 def get_client_image_by_date (date, client_id):
     client_image = cv2.imread(f'./images/{date}/{client_id}.jpg')
 
 currentWeekRange = DateTimeUtils.getCurrentWeekRange()
 print(f"WEEK RANGE --> {currentWeekRange[0].strftime('%d-%m-%Y')} - {currentWeekRange[1].strftime('%d-%m-%Y')}")
 compare_week_images(currentWeekRange)
-print(similar_clients)
 
 # cursor = db.get_collection('day_client').find({
 # "entry_date_time": {

@@ -139,22 +139,27 @@ def run_default_model(img):
             if Recognizer.classNames[cls] == "person":
                 on_find_person((x1, y1, x2, y2))
 
+            print(f"Current clients length --> {len(current_clients)}")
+
             designer.draw_person_counter(len(current_clients))
             designer.find_overlap_boxes_with_clients(current_clients)
 
-while True:
-    img = designer.get_frame()
+def start():
+    while True:
+        img = designer.get_frame()
 
-    run_gun_model(img)
-    run_default_model(img)
+        run_gun_model(img)
+        run_default_model(img)
 
-    print(f"Current clients length --> {len(current_clients)}")
+        designer.show_image()
+        check_clients_last_seen()
+        compare_clients_similarity()
 
-    designer.show_image()
-    check_clients_last_seen()
-    compare_clients_similarity()
+        if designer.is_quit_key_pressed():
+            break
 
-    if designer.is_quit_key_pressed():
-        break
+def finalize():
+    designer.finalize()
 
-designer.finalize()
+start()
+finalize()
