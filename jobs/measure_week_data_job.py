@@ -15,6 +15,9 @@ today = datetime.now()
 week_client = []
 unique_image_paths = []
 
+day_client_collection = db.get_collection('day_client')
+week_client_collection = db.get_collection('week_client')
+
 def get_existent_week_folders(daysOfWeekRange):
     existent_week_paths = []
 
@@ -57,7 +60,7 @@ def compare_week_images (week_range):
             return
 
         current_client_id = unique_image_paths[0].split('/')[3].split('.')[0]
-        current_day_client = db.get_collection('day_client').find_one({
+        current_day_client = day_client_collection.find_one({
             "_id": UUID(current_client_id)
         })
 
@@ -73,7 +76,7 @@ def compare_week_images (week_range):
                 is_some_image_similar = True
                 compared_client_id = unique_image_paths[i + 1].split('/')[3].split('.')[0]
 
-                compared_day_client = db.get_collection('day_client').find_one({
+                compared_day_client = day_client_collection.find_one({
                     "_id": UUID(compared_client_id)
                 })
 
@@ -91,7 +94,7 @@ def compare_week_images (week_range):
                 if formated_compared_client_entry_date_time > formated_last_entry_date_time:
                     last_entry_date_time = compared_day_client["entry_date_time"]
 
-                db.get_collection('day_client').update_many({
+                day_client_collection.update_many({
                     "_id": {"$in": [UUID(current_client_id), UUID(compared_client_id)]}
                 }, {
                     "$set": {
@@ -101,7 +104,7 @@ def compare_week_images (week_range):
 
                 os.remove(unique_image_paths[i + 1])
 
-        week_client = db.get_collection('week_client').find_one({
+        week_client = week_client_collection.find_one({
             "_id": UUID(current_client_id)
         })
 
