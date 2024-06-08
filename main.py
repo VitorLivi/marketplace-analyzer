@@ -144,22 +144,17 @@ def run_default_model(img):
             designer.draw_person_counter(len(current_clients))
             designer.find_overlap_boxes_with_clients(current_clients)
 
-def start():
-    while True:
-        img = designer.get_frame()
+while True:
+    img = designer.get_frame()
 
-        run_gun_model(img)
-        run_default_model(img)
+    run_gun_model(img)
+    run_default_model(img)
 
-        designer.show_image()
-        check_clients_last_seen()
-        compare_clients_similarity()
+    designer.show_image()
+    check_clients_last_seen()
+    compare_clients_similarity()
 
-        if designer.is_quit_key_pressed():
-            break
+    if designer.is_quit_key_pressed():
+        designer.finalize()
 
-def finalize():
-    designer.finalize()
 
-start()
-finalize()

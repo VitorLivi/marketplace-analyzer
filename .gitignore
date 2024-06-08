@@ -1,5 +1,6 @@
 # ignore pycache
 **/__pycache__
-/images/temp
+/images/*
+
 data
 
