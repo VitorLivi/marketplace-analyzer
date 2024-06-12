@@ -33,10 +33,13 @@ class Client:
     if self.image == None:
         return
 
-    date = datetime.date.strftime(datetime.date.today(), "%d-%m-%Y")
+    today = datetime.date.today()
+
+    date = datetime.date.strftime(today, "%d-%m-%Y")
+    month = datetime.date.strftime(today, "%m-%Y")
 
     image = cv2.imread(self.image)
-    cv2.imwrite(f'./images/{date}/{self.id}.jpg', image)
+    cv2.imwrite(f'./images/{month}/{date}/{self.id}.jpg', image)
 
   def enter(self):
     self.entry_date_time = datetime.datetime.now()

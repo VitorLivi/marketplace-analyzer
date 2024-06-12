@@ -18,23 +18,28 @@ unique_image_paths = []
 day_client_collection = db.get_collection('day_client')
 week_client_collection = db.get_collection('week_client')
 
+
+today = day.strftime("%d-%m-%Y")
+month = today.strftime("%m-%Y")
+
 def get_existent_week_folders(daysOfWeekRange):
+    global today, month
     existent_week_paths = []
 
     for day in daysOfWeekRange:
-        if os.path.exists(f'./images/{day.strftime("%d-%m-%Y")}'):
-            existent_week_paths.append(day.strftime("%d-%m-%Y"))
+        if os.path.exists(f'./images/{month}/{today}'):
+            existent_week_paths.append(today)
 
     return existent_week_paths
 
 def get_unique_image_paths(existent_week_folders):
-    global unique_image_paths
+    global unique_image_paths, month
 
     for day in existent_week_folders:
-        all_image_name = os.listdir(f'./images/{day}')
+        all_image_name = os.listdir(f'./images/{month}/{day}')
 
         for image_name in all_image_name:
-            unique_image_paths.append('./images/' + day + '/' + image_name)
+            unique_image_paths.append('./images/{month}/{day}/' + image_name)
 
 def compare_images(image_path, image_path2):
     current_image_to_compare = FaceRecognizer.find_face_encodings(image_path)
