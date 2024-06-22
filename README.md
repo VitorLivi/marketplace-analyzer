@@ -55,7 +55,7 @@ https://github.com/VitorLivi/marketplace-analyzer/assets/44207509/80fcc06a-6ea9-
 
 ### How it works
 
-It gets frame by frame, applies the Yolo recognition model and the weapon recognition model separately, crops the person images, and stores them in a temp directory, an example above:
+It gets frame by frame, applies the Yolo recognition model and the weapon recognition model separately, crops the person images, and stores them in a temp directory, an example bellow:
 
 ![1c186d3f-c965-4bf6-a0a8-aecf7bee1d90](https://github.com/VitorLivi/marketplace-analyzer/assets/44207509/c3b42c4e-a891-4e7c-9c46-15b31eff1319)
 
