@@ -18,17 +18,16 @@ unique_image_paths = []
 day_client_collection = db.get_collection('day_client')
 week_client_collection = db.get_collection('week_client')
 
-
-today = day.strftime("%d-%m-%Y")
 month = today.strftime("%m-%Y")
 
 def get_existent_week_folders(daysOfWeekRange):
-    global today, month
+    global month
     existent_week_paths = []
 
     for day in daysOfWeekRange:
-        if os.path.exists(f'./images/{month}/{today}'):
-            existent_week_paths.append(today)
+        day = day.strftime("%d-%m-%Y")
+        if os.path.exists(f'./images/{month}/{day}'):
+            existent_week_paths.append(day)
 
     return existent_week_paths
 
@@ -39,7 +38,7 @@ def get_unique_image_paths(existent_week_folders):
         all_image_name = os.listdir(f'./images/{month}/{day}')
 
         for image_name in all_image_name:
-            unique_image_paths.append('./images/{month}/{day}/' + image_name)
+            unique_image_paths.append(f'./images/{month}/{day}/{image_name}')
 
 def compare_images(image_path, image_path2):
     current_image_to_compare = FaceRecognizer.find_face_encodings(image_path)
@@ -50,7 +49,7 @@ def compare_images(image_path, image_path2):
 def compare_week_images (week_range):
     global unique_image_paths, week_client
 
-    days_of_week_range = DateTimeUtils.getDaysOfWeekRange(week_range)
+    days_of_week_range = DateTimeUtils.get_days_of_week_range(week_range)
     existent_week_folders = get_existent_week_folders(days_of_week_range)
 
     has_similar_images = True
@@ -64,10 +63,15 @@ def compare_week_images (week_range):
             print("Insufficient images to compare")
             return
 
-        current_client_id = unique_image_paths[0].split('/')[3].split('.')[0]
+        current_client_id = unique_image_paths[0].split('/')[4].split('.')[0]
+
         current_day_client = day_client_collection.find_one({
             "_id": UUID(current_client_id)
         })
+
+        if (current_day_client is None):
+            print(f"Client {current_client_id} not find in the database")
+            return
 
         last_entry_date_time = current_day_client["entry_date_time"]
         first_entry_date_time = current_day_client["entry_date_time"]
@@ -79,7 +83,7 @@ def compare_week_images (week_range):
             is_similar = compare_images(unique_image_paths[0], unique_image_paths[i + 1])
             if is_similar:
                 is_some_image_similar = True
-                compared_client_id = unique_image_paths[i + 1].split('/')[3].split('.')[0]
+                compared_client_id = unique_image_paths[i + 1].split('/')[4].split('.')[0]
 
                 compared_day_client = day_client_collection.find_one({
                     "_id": UUID(compared_client_id)
@@ -125,7 +129,7 @@ def compare_week_images (week_range):
                 
         has_similar_images = is_some_image_similar
 
-currentWeekRange = DateTimeUtils.getCurrentWeekRange()
+current_week_range = DateTimeUtils.get_current_week_range()
 
-print(f"WEEK RANGE --> {currentWeekRange[0].strftime('%d-%m-%Y')} - {currentWeekRange[1].strftime('%d-%m-%Y')}")
-compare_week_images(currentWeekRange)
+print(f"WEEK RANGE --> {current_week_range[0].strftime('%d-%m-%Y')} - {current_week_range[1].strftime('%d-%m-%Y')}")
+compare_week_images(current_week_range)

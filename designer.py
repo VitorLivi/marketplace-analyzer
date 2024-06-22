@@ -32,7 +32,7 @@ class Designer:
         self.boxes = boxes
 
         for box in boxes:
-            if classNames[int(box.cls[0])] == "cell phone":
+            if classNames[int(box.cls[0])] == "cell phone" or classNames[int(box.cls[0])] == "remote":
                 continue
 
             # bounding box
@@ -87,7 +87,7 @@ class Designer:
         cv2.putText(self.img, f"Person count: {length}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
     def is_quit_key_pressed(self):
-        return cv2.waitKey(1000) == ord('q')
+        return cv2.waitKey(100) == ord('q')
 
     def show_image(self):
         cv2.imshow("Image", self.img)

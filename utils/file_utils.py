@@ -31,3 +31,10 @@ class FileUtils:
         if not os.path.exists(f'{path}/{date}'):
             os.makedirs(f'{path}/{date}')
 
+    @staticmethod
+    def create_default_dirs ():
+        if not os.path.exists('./images/temp'):
+            os.makedirs('./images/temp')
+
+        FileUtils.create_today_dir(os.path.abspath('./images'))
+

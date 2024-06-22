@@ -9,8 +9,8 @@ from recognizer import Recognizer
 from database import Database
 import time
 
+FileUtils.create_default_dirs()
 FileUtils.remove_all_in_dir(os.path.abspath('./images/temp'))
-FileUtils.create_today_dir(os.path.abspath('./images'))
 
 current_clients = []
 clients = []
